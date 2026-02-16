@@ -562,7 +562,10 @@ def main(args: FlatArguments, tc: TokenizerConfig):
     # on a small vocab and want a smaller embedding size, remove this test.
     # gather deepspeed to get "real" embedding size
     embeddings = model.get_input_embeddings()
-    with deepspeed.zero.GatheredParameters(embeddings.weight, modifier_rank=None):
+    if accelerator.state.deepspeed_plugin is not None and accelerator.state.deepspeed_plugin.zero_stage == 3:
+        with deepspeed.zero.GatheredParameters(embeddings.weight, modifier_rank=None):
+            embedding_size = embeddings.weight.shape[0]
+    else:
         embedding_size = embeddings.weight.shape[0]
     # resize does its own gather
     if len(tokenizer) > embedding_size:
